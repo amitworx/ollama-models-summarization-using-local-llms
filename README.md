@@ -2,8 +2,6 @@
 
 A sleek, locally-hosted web application that allows you to search the official [Ollama Library](https://ollama.com/library) and generate deep, AI-powered architectural summaries of the models using your local `gpt-oss:20b` deployment.
 
-![Walkthrough Demo](https://github.com/user-attachments/assets/demo-placeholder) <!-- Replace with actual screenshot or demo gif -->
-
 ## ✨ Features
 - **Live Library Search**: Scrapes and searches the live Ollama model library directly from `ollama.com`.
 - **AI-Powered Insights**: Select any model to generate a comprehensive, highly detailed markdown summary of its use cases, strengths, and architecture using `gpt-oss:20b`.
