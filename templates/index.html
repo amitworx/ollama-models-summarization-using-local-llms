@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ollama Models Indexer</title>
+    <!-- Use Inter font for modern typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Include Marked.js to render the LLM markdown response -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-base: #0a0a0c;
+            --bg-surface: #121316;
+            --bg-surface-hover: #1c1d22;
+            --text-primary: #ffffff;
+            --text-secondary: #9496a1;
+            --accent-primary: #6366f1;
+            --accent-secondary: #8b5cf6;
+            --border-color: #2b2d35;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        nav {
+            padding: 1.5rem 3rem;
+            border-bottom: 1px solid var(--border-color);
+            background: rgba(18, 19, 22, 0.7);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .brand {
+            font-size: 1.5rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        main {
+            flex: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 4rem;
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            letter-spacing: -1px;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .search-container {
+            position: relative;
+            max-width: 600px;
+            margin: 2rem auto 0;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            padding-right: 4rem;
+            font-size: 1.1rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 999px;
+            outline: none;
+            transition: all 0.3s ease;
+            box-sizing: border-box;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+
+        .search-btn {
+            position: absolute;
+            right: 8px;
+            top: 8px;
+            bottom: 8px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+            border-radius: 999px;
+            color: white;
+            padding: 0 1.5rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .search-btn:hover {
+            opacity: 0.9;
+        }
+
+        .search-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .info-message {
+            text-align: center;
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            min-height: 24px;
+        }
+
+        .models-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .model-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .model-card::after {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05));
+            opacity: 0;
+            transition: opacity 0.3s;
+            pointer-events: none;
+        }
+
+        .model-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-primary);
+            box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+        }
+
+        .model-card:hover::after {
+            opacity: 1;
+        }
+
+        .model-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0 0 0.5rem 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .model-name span {
+            word-break: break-all;
+        }
+
+        .model-desc {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .ai-sparkle {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 1.2rem;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: all 0.3s ease;
+        }
+
+        .model-card:hover .ai-sparkle {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal {
+            background: var(--bg-base);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(20px) scale(0.95);
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal-overlay.active .modal {
+            transform: translateY(0) scale(1);
+        }
+
+        .modal-header {
+            padding: 2rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .modal-title {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        .modal-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--accent-secondary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 2rem;
+            line-height: 1;
+            cursor: pointer;
+            transition: color 0.2s;
+            padding: 0;
+        }
+
+        .close-btn:hover {
+            color: white;
+        }
+
+        .modal-body {
+            padding: 2rem;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .markdown-content {
+            line-height: 1.7;
+            color: #d1d5db;
+        }
+        
+        .markdown-content h1, .markdown-content h2, .markdown-content h3 {
+            color: white;
+            margin-top: 2rem;
+        }
+        
+        .markdown-content p {
+            margin-bottom: 1rem;
+        }
+
+        .markdown-content ul, .markdown-content ol {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+        }
+        
+        .markdown-content li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .markdown-content strong {
+            color: white;
+        }
+
+        .loader-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 3rem 0;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(99, 102, 241, 0.2);
+            border-radius: 50%;
+            border-top-color: var(--accent-primary);
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loader-text {
+            font-weight: 500;
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+
+        .error-message {
+            color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            margin: 1rem 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="brand">Ollama Indexer</div>
+    </nav>
+
+    <main>
+        <div class="hero">
+            <h1>Discover & Analyze Models</h1>
+            <p class="subtitle">Search the Ollama library and get enhanced architectural insights and summaries powered by gpt-oss:20b.</p>
+            
+            <form class="search-container" id="search-form">
+                <input type="text" id="search-input" class="search-input" placeholder="Search for models (e.g. llama3, mistral)...">
+                <button type="submit" id="search-btn" class="search-btn">Search</button>
+            </form>
+        </div>
+
+        <div class="info-message" id="info-msg">Loading popular models from Ollama...</div>
+        
+        <div class="error-message" id="error-msg"></div>
+
+        <div class="models-grid" id="models-grid">
+            <!-- Models will be injected here -->
+        </div>
+    </main>
+
+    <!-- Modal for Detailed Summary -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title" id="modal-model-name">Loading...</h2>
+                    <div class="modal-badge">✨ Enhanced by gpt-oss:20b</div>
+                </div>
+                <button class="close-btn" id="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="modal-loader" class="loader-container">
+                    <div class="spinner"></div>
+                    <div class="loader-text">Analyzing model architecture and capabilities...</div>
+                </div>
+                <div id="modal-content" class="markdown-content" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const searchForm = document.getElementById('search-form');
+        const searchInput = document.getElementById('search-input');
+        const searchBtn = document.getElementById('search-btn');
+        const modelsGrid = document.getElementById('models-grid');
+        const infoMsg = document.getElementById('info-msg');
+        const errorMsg = document.getElementById('error-msg');
+
+        const modal = document.getElementById('modal');
+        const closeModal = document.getElementById('close-modal');
+        const modalTitle = document.getElementById('modal-model-name');
+        const modalLoader = document.getElementById('modal-loader');
+        const modalContent = document.getElementById('modal-content');
+
+        // Fetch models from API
+        async function fetchModels(query = '') {
+            try {
+                infoMsg.textContent = query ? `Searching for "${query}"...` : 'Fetching models...';
+                errorMsg.style.display = 'none';
+                modelsGrid.innerHTML = '';
+                searchBtn.disabled = true;
+
+                const url = query ? `/api/search?q=${encodeURIComponent(query)}` : '/api/search';
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to fetch models');
+                }
+
+                if (data.models.length === 0) {
+                    infoMsg.textContent = 'No models found.';
+                } else {
+                    infoMsg.textContent = `Found ${data.models.length} model(s). Click any model for an AI analysis.`;
+                    renderModels(data.models);
+                }
+            } catch (err) {
+                console.error(err);
+                errorMsg.textContent = err.message;
+                errorMsg.style.display = 'block';
+                infoMsg.textContent = '';
+            } finally {
+                searchBtn.disabled = false;
+            }
+        }
+
+        // Render models in the grid
+        function renderModels(models) {
+            modelsGrid.innerHTML = models.map(model => `
+                <div class="model-card" onclick="openModelSummary('${model.name}', \`${model.description.replace(/`/g, '\\`').replace(/'/g, "\\'")}\`)">
+                    <h3 class="model-name">
+                        <span>${model.name}</span>
+                        <span class="ai-sparkle">✨</span>
+                    </h3>
+                    <p class="model-desc">${model.description}</p>
+                </div>
+            `).join('');
+        }
+
+        // Open Modal and fetch smart summary
+        async function openModelSummary(name, description) {
+            modalTitle.textContent = name;
+            modalLoader.style.display = 'flex';
+            modalContent.style.display = 'none';
+            modalContent.innerHTML = '';
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+
+            try {
+                const res = await fetch('/api/summarize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model_name: name, description: description })
+                });
+                
+                const data = await res.json();
+                
+                if (!data.success) {
+                    throw new Error(data.error || 'Failed to get summary');
+                }
+
+                modalLoader.style.display = 'none';
+                modalContent.innerHTML = marked.parse(data.summary);
+                modalContent.style.display = 'block';
+
+            } catch (err) {
+                console.error(err);
+                modalLoader.style.display = 'none';
+                modalContent.innerHTML = `<div class="error-message" style="display:block">Error: ${err.message}</div>`;
+                modalContent.style.display = 'block';
+            }
+        }
+
+        // Close Modal
+        closeModal.addEventListener('click', () => {
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        });
+
+        // Close when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
+
+        // Search Form Submit
+        searchForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            fetchModels(searchInput.value.trim());
+        });
+
+        // Initial fetch
+        fetchModels();
+    </script>
+</body>
+</html>
