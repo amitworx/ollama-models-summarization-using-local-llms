@@ -70,8 +70,7 @@ ollama-models-index/
 ```
 
 ## 🤝 Contributing
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/amitworx/ollama-models-summarization-using-local-llms
-/issues).
+Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/amitworx/ollama-models-summarization-using-local-llms/issues).
 
 ## 📝 License
 This project is [MIT](https://opensource.org/licenses/MIT) licensed.
